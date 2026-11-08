@@ -110,7 +110,7 @@ export default function RouteOptimizerMap() {
       setError(null);
       const [lots, vehs] = await Promise.all([
         apiService.getAvailableLots(),
-        apiService.getAvailableVehicles()
+        apiService.getAllVehicles()
       ]);
       setAvailableLots(lots);
       setVehicles(vehs);
