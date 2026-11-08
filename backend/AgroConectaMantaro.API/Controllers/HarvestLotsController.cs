@@ -52,8 +52,15 @@ public class HarvestLotsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var success = await _service.DeleteAsync(id);
-        if (!success) return NotFound();
-        return NoContent();
+        try
+        {
+            var success = await _service.DeleteAsync(id);
+            if (!success) return NotFound(new { message = $"Harvest lot with id {id} not found." });
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

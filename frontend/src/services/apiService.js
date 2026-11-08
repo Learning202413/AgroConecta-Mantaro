@@ -44,6 +44,17 @@ export const apiService = {
     return handleResponse(res);
   },
 
+  async deleteLot(id) {
+    const res = await fetch(`${API_BASE}/harvestlots/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${res.status}: No se pudo eliminar el lote`);
+    }
+    return true;
+  },
+
   // Transport Vehicles
   async getAvailableVehicles() {
     const res = await fetch(`${API_BASE}/transportvehicles/available`);

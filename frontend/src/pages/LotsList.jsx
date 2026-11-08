@@ -1,15 +1,33 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import Pagination from '../components/ui/Pagination';
 import CustomSelect from '../components/ui/CustomSelect';
-import { useOutletContext } from 'react-router-dom';
-import { Sprout, PlusCircle, MapPin, Phone, RefreshCw, Search, Filter, Truck } from 'lucide-react';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import {
+  Sprout,
+  PlusCircle,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Search,
+  Filter,
+  Truck,
+  Trash2,
+  ArrowRight,
+  ShieldAlert,
+  UserCheck,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 
 export default function LotsList() {
+  const navigate = useNavigate();
   const context = useOutletContext();
   const { user } = useAuth();
+
   const [lots, setLots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +35,13 @@ export default function LotsList() {
   // Search & Filter state (Shneiderman Mantra: Zoom and Filter)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCrop, setSelectedCrop] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [onlyMyLots, setOnlyMyLots] = useState(false);
+
+  // Deletion state (Norman / Shneiderman Safety Constraint)
+  const [lotToDelete, setLotToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState(null);
 
   // Pagination state (Nielsen NN/g & ISO 9241-110 User Control)
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,12 +57,34 @@ export default function LotsList() {
   const loadLots = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await apiService.getAllLots();
       setLots(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!lotToDelete) return;
+    try {
+      setIsDeleting(true);
+      await apiService.deleteLot(lotToDelete.id);
+      setActionFeedback({
+        type: 'success',
+        message: `Lote #${lotToDelete.id} (${lotToDelete.cropType}) cancelado exitosamente.`
+      });
+      setLotToDelete(null);
+      await loadLots();
+    } catch (err) {
+      setActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al cancelar el lote de cosecha.'
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -49,14 +96,18 @@ export default function LotsList() {
         lot.townName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lot.cropType.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCrop = selectedCrop === 'ALL' || lot.cropType === selectedCrop;
-      return matchSearch && matchCrop;
+      const matchStatus = selectedStatus === 'ALL' || lot.status === selectedStatus;
+      const matchMyLots =
+        !onlyMyLots ||
+        (user?.fullName && lot.producerName.toLowerCase().includes(user.fullName.toLowerCase()));
+      return matchSearch && matchCrop && matchStatus && matchMyLots;
     });
-  }, [lots, searchTerm, selectedCrop]);
+  }, [lots, searchTerm, selectedCrop, selectedStatus, onlyMyLots, user]);
 
   // Reset to page 1 if filter reduces count below current page
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrop, pageSize]);
+  }, [searchTerm, selectedCrop, selectedStatus, onlyMyLots, pageSize]);
 
   // Sliced lots for current page
   const paginatedLots = useMemo(() => {
@@ -73,18 +124,18 @@ export default function LotsList() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sprout size={24} color="#15803d" />
             <span>Inventario de Cosechas en el Valle</span>
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
-            Lotes registrados para consolidación y transporte hacia el Mercado Mayorista de Huancayo.
+            Lotes registrados para consolidación y transporte hacia el Gran Mercado Mayorista de Huancayo.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
             onClick={loadLots}
@@ -107,23 +158,27 @@ export default function LotsList() {
           </button>
 
           {user?.role === 'Carrier' ? (
-            <div
+            <button
+              type="button"
+              onClick={() => navigate('/routes')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
-                border: '1px solid #bfdbfe',
-                padding: '8px 14px',
+                backgroundColor: '#1d4ed8',
+                color: '#ffffff',
+                padding: '9px 16px',
                 borderRadius: '8px',
+                border: 'none',
                 fontWeight: '700',
-                fontSize: '0.82rem'
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(29, 78, 216, 0.25)'
               }}
             >
-              <Truck size={15} />
-              <span>Cargas Disponibles para Flete</span>
-            </div>
+              <Truck size={16} />
+              <span>Armar Hoja de Ruta</span>
+            </button>
           ) : (
             <button
               type="button"
@@ -150,6 +205,37 @@ export default function LotsList() {
         </div>
       </div>
 
+      {/* Role Feedback Banner */}
+      {actionFeedback && (
+        <div
+          style={{
+            padding: '12px 16px',
+            backgroundColor: actionFeedback.type === 'success' ? '#f0fdf4' : '#fee2e2',
+            border: `1px solid ${actionFeedback.type === 'success' ? '#86efac' : '#fca5a5'}`,
+            color: actionFeedback.type === 'success' ? '#166534' : '#991b1b',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.86rem',
+            fontWeight: '600'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {actionFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>{actionFeedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionFeedback(null)}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: '800' }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Filter and Search Bar (Shneiderman Mantra: Zoom and Filter) */}
       <div
         style={{
@@ -160,10 +246,11 @@ export default function LotsList() {
           backgroundColor: '#ffffff',
           padding: '12px 16px',
           borderRadius: '10px',
-          border: '1px solid #e2e8f0'
+          border: '1px solid #e2e8f0',
+          flexWrap: 'wrap'
         }}
       >
-        <div style={{ position: 'relative', flex: 1 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
           <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
             <Search size={16} />
           </span>
@@ -184,7 +271,8 @@ export default function LotsList() {
           />
         </div>
 
-        <div style={{ width: '220px', flexShrink: 0 }}>
+        {/* Crop Filter */}
+        <div style={{ width: '190px', flexShrink: 0 }}>
           <CustomSelect
             value={selectedCrop}
             onChange={(val) => setSelectedCrop(val)}
@@ -196,6 +284,52 @@ export default function LotsList() {
             ariaLabel="Filtrar por cultivo"
           />
         </div>
+
+        {/* Status Filter */}
+        <div style={{ width: '180px', flexShrink: 0 }}>
+          <CustomSelect
+            value={selectedStatus}
+            onChange={(val) => setSelectedStatus(val)}
+            options={[
+              { value: 'ALL', label: 'Todos los estados' },
+              { value: 'Available', label: 'Disponible' },
+              { value: 'Assigned', label: 'Asignado a Ruta' },
+              { value: 'InTransit', label: 'En Tránsito' },
+              { value: 'Delivered', label: 'Entregado' }
+            ]}
+            icon={Filter}
+            ariaLabel="Filtrar por estado de transporte"
+          />
+        </div>
+
+        {/* Producer "Only My Lots" Toggle (Jakob Nielsen H7: Efficiency) */}
+        {user?.role === 'Producer' && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.82rem',
+              fontWeight: '700',
+              color: onlyMyLots ? '#15803d' : '#64748b',
+              cursor: 'pointer',
+              userSelect: 'none',
+              backgroundColor: onlyMyLots ? '#f0fdf4' : '#f8fafc',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: onlyMyLots ? '1px solid #86efac' : '1px solid #e2e8f0'
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={onlyMyLots}
+              onChange={(e) => setOnlyMyLots(e.target.checked)}
+              style={{ accentColor: '#15803d', cursor: 'pointer' }}
+            />
+            <UserCheck size={14} />
+            <span>Solo mis cosechas</span>
+          </label>
+        )}
       </div>
 
       {loading ? (
@@ -214,7 +348,7 @@ export default function LotsList() {
             No se encontraron cosechas
           </h3>
           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 16px 0' }}>
-            {searchTerm || selectedCrop !== 'ALL'
+            {searchTerm || selectedCrop !== 'ALL' || selectedStatus !== 'ALL' || onlyMyLots
               ? 'Intente cambiar los filtros o el término de búsqueda.'
               : 'Haga clic en "+ Registrar Cosecha" para agregar el primer lote.'}
           </p>
@@ -222,7 +356,7 @@ export default function LotsList() {
       ) : (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
           <div style={{ overflowX: 'auto', borderRadius: '12px 12px 0 0' }}>
-            <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+            <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
               <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                 <tr>
                   <th scope="col" style={{ padding: '12px 18px', fontWeight: '700' }}>ID</th>
@@ -232,6 +366,7 @@ export default function LotsList() {
                   <th scope="col" style={{ padding: '12px 18px', fontWeight: '700' }}>Precio Sugerido</th>
                   <th scope="col" style={{ padding: '12px 18px', fontWeight: '700' }}>Ubicación</th>
                   <th scope="col" style={{ padding: '12px 18px', fontWeight: '700' }}>Estado</th>
+                  <th scope="col" style={{ padding: '12px 18px', fontWeight: '700', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,6 +399,84 @@ export default function LotsList() {
                     <td style={{ padding: '14px 18px' }}>
                       <StatusBadge status={l.status} />
                     </td>
+                    <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                      {/* Carrier Action: Add to Route */}
+                      {user?.role === 'Carrier' && (
+                        l.status === 'Available' ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/routes', { state: { preselectedLotId: l.id } })}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '6px 12px',
+                              backgroundColor: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: '6px',
+                              fontSize: '0.78rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.15s'
+                            }}
+                            title="Consolidar este lote en el optimizador de rutas"
+                          >
+                            <Truck size={13} />
+                            <span>Consolidar</span>
+                            <ArrowRight size={11} />
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                            {l.status === 'Delivered' ? 'Entregado' : 'En flete'}
+                          </span>
+                        )
+                      )}
+
+                      {/* Producer / Admin Action: Cancel Ticket */}
+                      {user?.role !== 'Carrier' && (
+                        l.status === 'Available' ? (
+                          <button
+                            type="button"
+                            onClick={() => setLotToDelete(l)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '5px 10px',
+                              backgroundColor: '#fff1f2',
+                              color: '#e11d48',
+                              border: '1px solid #fecdd3',
+                              borderRadius: '6px',
+                              fontSize: '0.76rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                            title="Cancelar ticket de cosecha"
+                          >
+                            <Trash2 size={12} />
+                            <span>Cancelar</span>
+                          </button>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '0.74rem',
+                              color: '#64748b',
+                              backgroundColor: '#f1f5f9',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="Lote asignado a viaje: no se puede cancelar"
+                          >
+                            <ShieldAlert size={11} color="#94a3b8" />
+                            <span>{l.status === 'Delivered' ? 'Entregado' : 'Asignado'}</span>
+                          </span>
+                        )
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -281,6 +494,23 @@ export default function LotsList() {
           />
         </div>
       )}
+
+      {/* Confirmation Modal for Canceling/Deleting Lot */}
+      <ConfirmModal
+        isOpen={Boolean(lotToDelete)}
+        title="Cancelar Ticket de Cosecha"
+        description={
+          lotToDelete
+            ? `¿Está seguro de que desea cancelar el lote de ${lotToDelete.cropType} (${lotToDelete.weightKg} kg) en ${lotToDelete.townName}? Esta acción liberará el flete y eliminará el registro.`
+            : ''
+        }
+        confirmText="Sí, Cancelar Lote"
+        cancelText="Volver"
+        danger={true}
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setLotToDelete(null)}
+      />
     </div>
   );
 }

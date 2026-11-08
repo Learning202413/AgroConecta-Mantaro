@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -83,6 +84,7 @@ const stopCollectedIcon = L.divIcon({
 
 export default function RouteOptimizerMap() {
   const { user } = useAuth();
+  const location = useLocation();
   const [availableLots, setAvailableLots] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
@@ -122,7 +124,12 @@ export default function RouteOptimizerMap() {
           setSelectedVehicleId(vehs[0].id.toString());
         }
       }
-      if (lots.length > 0 && selectedLotIds.length === 0) {
+
+      const preselectedId = location.state?.preselectedLotId;
+      if (preselectedId && lots.some(l => l.id === preselectedId)) {
+        setSelectedLotIds([preselectedId]);
+        setValidationAlert(`Lote #${preselectedId} preseleccionado desde el inventario.`);
+      } else if (lots.length > 0 && selectedLotIds.length === 0) {
         setSelectedLotIds(lots.slice(0, 3).map(l => l.id));
       }
     } catch (err) {
@@ -339,9 +346,46 @@ export default function RouteOptimizerMap() {
             </h3>
           </div>
 
-          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 12px 0' }}>
-            Marque las cosechas a consolidar en este viaje.
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
+              Marque las cosechas a consolidar en este viaje.
+            </p>
+            {availableLots.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLotIds(availableLots.map(l => l.id))}
+                  style={{
+                    fontSize: '0.74rem',
+                    color: '#15803d',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    padding: 0
+                  }}
+                >
+                  Seleccionar todos
+                </button>
+                <span style={{ color: '#cbd5e1', fontSize: '0.74rem' }}>|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLotIds([])}
+                  style={{
+                    fontSize: '0.74rem',
+                    color: '#64748b',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    padding: 0
+                  }}
+                >
+                  Limpiar
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Lots Selection List */}
           <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '6px', marginBottom: '18px' }}>

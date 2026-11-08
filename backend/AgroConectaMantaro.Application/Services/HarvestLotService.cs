@@ -56,6 +56,12 @@ public class HarvestLotService : IHarvestLotService
     {
         var lot = await _repository.GetByIdAsync(id);
         if (lot == null) return false;
+        
+        if (lot.Status != "Available")
+        {
+            throw new InvalidOperationException("No se puede cancelar un lote que ya ha sido asignado a un flete o está en tránsito.");
+        }
+
         await _repository.DeleteAsync(id);
         return true;
     }
