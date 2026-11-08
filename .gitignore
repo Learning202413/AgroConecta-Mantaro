@@ -1,0 +1,43 @@
+# Root .gitignore for AgroConecta Mantaro
+
+# .NET / C#
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+.vs/
+_ReSharper*/
+*.DotSettings.user
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Temporary & Large Evaluation Documents
+*.pdf
+*.log
+tmp/
+temp/
