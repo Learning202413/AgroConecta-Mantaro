@@ -82,6 +82,23 @@ export const apiService = {
     return handleResponse(res);
   },
 
+  // Crops Catalog (Hierarchical & Server-side Search)
+  async getCropCategories() {
+    const res = await fetch(`${API_BASE}/crops/categories`);
+    return handleResponse(res);
+  },
+
+  async searchCrops(category = '', search = '', page = 1, pageSize = 12) {
+    const params = new URLSearchParams();
+    if (category && category !== 'Todos') params.append('category', category);
+    if (search) params.append('search', search);
+    params.append('page', page);
+    params.append('pageSize', pageSize);
+
+    const res = await fetch(`${API_BASE}/crops?${params.toString()}`);
+    return handleResponse(res);
+  },
+
   // Market Prices
   async getAllPrices() {
     const res = await fetch(`${API_BASE}/marketprices`);

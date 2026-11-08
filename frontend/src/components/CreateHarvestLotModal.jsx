@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Modal from './ui/Modal';
 import CustomSelect from './ui/CustomSelect';
 import { apiService } from '../services/apiService';
@@ -22,7 +22,11 @@ import {
   Layers,
   Radio,
   Plus,
-  X
+  X,
+  Search,
+  ChevronDown,
+  Loader2,
+  Check
 } from 'lucide-react';
 
 // Fix Leaflet marker icons in Vite
@@ -139,6 +143,86 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
     error: null,
     detected: false
   });
+
+  // Hybrid Crop Catalog State: Hierarchical (Option 2) + Server-side Search (Option 3)
+  const [isCropDropdownOpen, setIsCropDropdownOpen] = useState(false);
+  const [cropCategories, setCropCategories] = useState([
+    'Todos',
+    'Tubérculos y Raíces',
+    'Hortalizas',
+    'Leguminosas',
+    'Granos y Cereales',
+    'Frutales y Hierbas'
+  ]);
+  const [selectedCropCategory, setSelectedCropCategory] = useState('Todos');
+  const [cropSearchQuery, setCropSearchQuery] = useState('');
+  const [cropSearchResults, setCropSearchResults] = useState([]);
+  const [cropSearchLoading, setCropSearchLoading] = useState(false);
+  const [cropTotalCount, setCropTotalCount] = useState(0);
+  const cropContainerRef = useRef(null);
+
+  // Close crop dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (cropContainerRef.current && !cropContainerRef.current.contains(e.target)) {
+        setIsCropDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch categories and initial crops when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadCropCategories();
+      fetchCrops(selectedCropCategory, cropSearchQuery);
+    }
+  }, [isOpen]);
+
+  // Debounced search on category or query change
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      fetchCrops(selectedCropCategory, cropSearchQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [selectedCropCategory, cropSearchQuery, isOpen]);
+
+  const loadCropCategories = async () => {
+    try {
+      const cats = await apiService.getCropCategories();
+      if (Array.isArray(cats) && cats.length > 0) {
+        setCropCategories(cats);
+      }
+    } catch {
+      // fallback
+    }
+  };
+
+  const fetchCrops = async (category, search) => {
+    try {
+      setCropSearchLoading(true);
+      const res = await apiService.searchCrops(category, search, 1, 15);
+      if (res && res.items) {
+        setCropSearchResults(res.items);
+        setCropTotalCount(res.totalCount);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCropSearchLoading(false);
+    }
+  };
+
+  const handleSelectCrop = (crop) => {
+    setFormData(prev => ({
+      ...prev,
+      cropType: crop.name,
+      estimatedPricePerKg: crop.referencePriceKg.toFixed(2)
+    }));
+    setIsCropDropdownOpen(false);
+  };
 
   useEffect(() => {
     if (isOpen && user) {
@@ -425,16 +509,194 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
 
         {/* Crop, Weight & Price */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', marginBottom: '18px' }}>
-          <div>
-            <label htmlFor="lot-crop" style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-              Cultivo / Producto
+          <div ref={cropContainerRef} style={{ position: 'relative' }}>
+            <label htmlFor="lot-crop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+              <span>Cultivo / Producto</span>
+              <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: '600' }}>
+                Catálogo API (55+ Variedades)
+              </span>
             </label>
-            <CustomSelect
-              value={formData.cropType}
-              onChange={(val) => setFormData(prev => ({ ...prev, cropType: val }))}
-              options={CROPS.map(c => ({ value: c, label: c, icon: Sprout }))}
-              ariaLabel="Seleccionar tipo de cultivo"
-            />
+
+            {/* Trigger Button */}
+            <button
+              id="lot-crop"
+              type="button"
+              onClick={() => setIsCropDropdownOpen(!isCropDropdownOpen)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: isCropDropdownOpen ? '1px solid #15803d' : '1px solid #cbd5e1',
+                boxShadow: isCropDropdownOpen ? '0 0 0 2px rgba(21, 128, 61, 0.15)' : 'none',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textAlign: 'left',
+                boxSizing: 'border-box',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', overflow: 'hidden' }}>
+                <Sprout size={16} color="#15803d" style={{ flexShrink: 0 }} />
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {formData.cropType}
+                </span>
+              </div>
+              <ChevronDown
+                size={15}
+                color="#64748b"
+                style={{
+                  transform: isCropDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0
+                }}
+              />
+            </button>
+
+            {/* Dropdown Panel: Hierarchical Categories (Option 2) + Server-Side Debounced Search (Option 3) */}
+            {isCropDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  width: '380px',
+                  maxWidth: '92vw',
+                  zIndex: 1000,
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 12px 28px -4px rgba(0,0,0,0.18), 0 6px 12px -2px rgba(0,0,0,0.08)',
+                  animation: 'fadeIn 0.12s ease-out',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* 1. Category Filter Pills (Option 2) */}
+                <div style={{ padding: '8px 10px 6px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '5px' }}>
+                    Filtrar por Familia Agrícola:
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '3px' }}>
+                    {cropCategories.map(cat => {
+                      const isActive = selectedCropCategory === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCropCategory(cat)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '5px',
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            whiteSpace: 'nowrap',
+                            border: isActive ? '1px solid #15803d' : '1px solid #cbd5e1',
+                            backgroundColor: isActive ? '#dcfce7' : '#ffffff',
+                            color: isActive ? '#15803d' : '#475569',
+                            cursor: 'pointer',
+                            transition: 'all 0.12s ease'
+                          }}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Debounced Search Input (Option 3) */}
+                <div style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', position: 'relative' }}>
+                  <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    placeholder="Buscar variedad (ej. Canchán, Huayro, Quinua)..."
+                    value={cropSearchQuery}
+                    onChange={(e) => setCropSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px 7px 30px',
+                      fontSize: '0.8rem',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* 3. Server-side Results List */}
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {cropSearchLoading ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Loader2 size={16} className="animate-spin" color="#15803d" />
+                      <span>Consultando catálogo API...</span>
+                    </div>
+                  ) : cropSearchResults.length === 0 ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
+                      No se encontraron variedades para "{cropSearchQuery}"
+                    </div>
+                  ) : (
+                    cropSearchResults.map(crop => {
+                      const isSelected = formData.cropType === crop.name;
+                      return (
+                        <div
+                          key={crop.id}
+                          onClick={() => handleSelectCrop(crop)}
+                          style={{
+                            padding: '8px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f8fafc',
+                            backgroundColor: isSelected ? '#f0fdf4' : 'transparent',
+                            transition: 'background-color 0.1s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: isSelected ? '800' : '700', color: isSelected ? '#15803d' : '#0f172a' }}>
+                              {crop.name}
+                            </div>
+                            <div style={{ fontSize: '0.71rem', color: '#64748b', display: 'flex', gap: '6px', marginTop: '1px' }}>
+                              <span>{crop.category}</span>
+                              <span>•</span>
+                              <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>{crop.scientificName}</span>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#15803d' }}>
+                              S/ {crop.referencePriceKg.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.67rem', color: '#94a3b8' }}>
+                              {crop.typicalUnit}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* 4. Footer summary */}
+                <div style={{ padding: '6px 12px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: '0.7rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{cropTotalCount} variedades en base de datos</span>
+                  <span style={{ fontWeight: '700', color: '#15803d' }}>Paginación dinámica</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
