@@ -221,6 +221,7 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
       cropType: crop.name,
       estimatedPricePerKg: crop.referencePriceKg.toFixed(2)
     }));
+    setCropSearchQuery('');
     setIsCropDropdownOpen(false);
   };
 
@@ -507,201 +508,187 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
           </div>
         </div>
 
-        {/* Crop, Weight & Price */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', marginBottom: '18px' }}>
-          <div ref={cropContainerRef} style={{ position: 'relative' }}>
-            <label htmlFor="lot-crop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-              <span>Cultivo / Producto</span>
-              <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: '600' }}>
-                Catálogo API (55+ Variedades)
-              </span>
+        {/* Crop Selection (Option 2 Categories + Option 3 Debounced Server Search) */}
+        <div ref={cropContainerRef} style={{ marginBottom: '16px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <label htmlFor="lot-crop-input" style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sprout size={15} color="#15803d" />
+              <span>Cultivo / Variedad Agrícola</span>
             </label>
+            <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: '700', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
+              Catálogo Regional API ({cropTotalCount || '55+'} Variedades)
+            </span>
+          </div>
 
-            {/* Trigger Button */}
+          {/* Category Filter Pills (Option 2) - Visible Directly */}
+          <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '6px' }}>
+            {cropCategories.map(cat => {
+              const isActive = selectedCropCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCropCategory(cat);
+                    setIsCropDropdownOpen(true);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    whiteSpace: 'nowrap',
+                    border: isActive ? '1px solid #15803d' : '1px solid #cbd5e1',
+                    backgroundColor: isActive ? '#15803d' : '#ffffff',
+                    color: isActive ? '#ffffff' : '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s ease'
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Direct Search Input with Autocomplete (Option 3) */}
+          <div style={{ position: 'relative' }}>
+            <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              id="lot-crop-input"
+              type="text"
+              placeholder="Buscar cultivo (ej. Papa Canchán, Quinua, Arveja)..."
+              value={isCropDropdownOpen ? cropSearchQuery : (formData.cropType ? `${formData.cropType}` : '')}
+              onFocus={() => {
+                setIsCropDropdownOpen(true);
+              }}
+              onChange={(e) => {
+                setCropSearchQuery(e.target.value);
+                setIsCropDropdownOpen(true);
+              }}
+              style={{
+                width: '100%',
+                padding: '9px 36px 9px 34px',
+                borderRadius: '8px',
+                border: isCropDropdownOpen ? '1.5px solid #15803d' : '1px solid #cbd5e1',
+                boxShadow: isCropDropdownOpen ? '0 0 0 2px rgba(21, 128, 61, 0.15)' : 'none',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                color: '#0f172a',
+                outline: 'none',
+                boxSizing: 'border-box',
+                backgroundColor: '#ffffff'
+              }}
+            />
             <button
-              id="lot-crop"
               type="button"
               onClick={() => setIsCropDropdownOpen(!isCropDropdownOpen)}
               style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: isCropDropdownOpen ? '1px solid #15803d' : '1px solid #cbd5e1',
-                boxShadow: isCropDropdownOpen ? '0 0 0 2px rgba(21, 128, 61, 0.15)' : 'none',
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                fontSize: '0.88rem',
-                fontWeight: '600',
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
                 cursor: 'pointer',
-                textAlign: 'left',
-                boxSizing: 'border-box',
-                transition: 'all 0.15s ease'
+                padding: '4px',
+                color: '#64748b'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', overflow: 'hidden' }}>
-                <Sprout size={16} color="#15803d" style={{ flexShrink: 0 }} />
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {formData.cropType}
-                </span>
-              </div>
-              <ChevronDown
-                size={15}
-                color="#64748b"
-                style={{
-                  transform: isCropDropdownOpen ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s ease',
-                  flexShrink: 0
-                }}
-              />
+              <ChevronDown size={16} style={{ transform: isCropDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
 
-            {/* Dropdown Panel: Hierarchical Categories (Option 2) + Server-Side Debounced Search (Option 3) */}
+            {/* Dropdown Suggestions List */}
             {isCropDropdownOpen && (
               <div
                 style={{
                   position: 'absolute',
-                  top: 'calc(100% + 6px)',
+                  top: 'calc(100% + 4px)',
                   left: 0,
-                  width: '380px',
-                  maxWidth: '92vw',
+                  right: 0,
                   zIndex: 1000,
                   backgroundColor: '#ffffff',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  boxShadow: '0 12px 28px -4px rgba(0,0,0,0.18), 0 6px 12px -2px rgba(0,0,0,0.08)',
-                  animation: 'fadeIn 0.12s ease-out',
-                  overflow: 'hidden'
+                  boxShadow: '0 10px 25px -3px rgba(0,0,0,0.18), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                  maxHeight: '220px',
+                  overflowY: 'auto'
                 }}
               >
-                {/* 1. Category Filter Pills (Option 2) */}
-                <div style={{ padding: '8px 10px 6px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '5px' }}>
-                    Filtrar por Familia Agrícola:
+                {cropSearchLoading ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Loader2 size={16} className="animate-spin" color="#15803d" />
+                    <span>Consultando catálogo del valle...</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '3px' }}>
-                    {cropCategories.map(cat => {
-                      const isActive = selectedCropCategory === cat;
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setSelectedCropCategory(cat)}
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '5px',
-                            fontSize: '0.72rem',
-                            fontWeight: '700',
-                            whiteSpace: 'nowrap',
-                            border: isActive ? '1px solid #15803d' : '1px solid #cbd5e1',
-                            backgroundColor: isActive ? '#dcfce7' : '#ffffff',
-                            color: isActive ? '#15803d' : '#475569',
-                            cursor: 'pointer',
-                            transition: 'all 0.12s ease'
-                          }}
-                        >
-                          {cat}
-                        </button>
-                      );
-                    })}
+                ) : cropSearchResults.length === 0 ? (
+                  <div style={{ padding: '18px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+                    No se encontraron variedades para "{cropSearchQuery}" en {selectedCropCategory}.
                   </div>
-                </div>
-
-                {/* 2. Debounced Search Input (Option 3) */}
-                <div style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', position: 'relative' }}>
-                  <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    type="text"
-                    placeholder="Buscar variedad (ej. Canchán, Huayro, Quinua)..."
-                    value={cropSearchQuery}
-                    onChange={(e) => setCropSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px 7px 30px',
-                      fontSize: '0.8rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                    autoFocus
-                  />
-                </div>
-
-                {/* 3. Server-side Results List */}
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {cropSearchLoading ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <Loader2 size={16} className="animate-spin" color="#15803d" />
-                      <span>Consultando catálogo API...</span>
-                    </div>
-                  ) : cropSearchResults.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
-                      No se encontraron variedades para "{cropSearchQuery}"
-                    </div>
-                  ) : (
-                    cropSearchResults.map(crop => {
-                      const isSelected = formData.cropType === crop.name;
-                      return (
-                        <div
-                          key={crop.id}
-                          onClick={() => handleSelectCrop(crop)}
-                          style={{
-                            padding: '8px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid #f8fafc',
-                            backgroundColor: isSelected ? '#f0fdf4' : 'transparent',
-                            transition: 'background-color 0.1s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: isSelected ? '800' : '700', color: isSelected ? '#15803d' : '#0f172a' }}>
-                              {crop.name}
-                            </div>
-                            <div style={{ fontSize: '0.71rem', color: '#64748b', display: 'flex', gap: '6px', marginTop: '1px' }}>
-                              <span>{crop.category}</span>
-                              <span>•</span>
-                              <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>{crop.scientificName}</span>
-                            </div>
+                ) : (
+                  cropSearchResults.map(crop => {
+                    const isSelected = formData.cropType === crop.name;
+                    return (
+                      <div
+                        key={crop.id}
+                        onClick={() => handleSelectCrop(crop)}
+                        style={{
+                          padding: '9px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f1f5f9',
+                          backgroundColor: isSelected ? '#f0fdf4' : 'transparent',
+                          transition: 'background-color 0.1s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: isSelected ? '800' : '700', color: isSelected ? '#15803d' : '#0f172a' }}>
+                            {crop.name}
                           </div>
-
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#15803d' }}>
-                              S/ {crop.referencePriceKg.toFixed(2)}
-                            </div>
-                            <div style={{ fontSize: '0.67rem', color: '#94a3b8' }}>
-                              {crop.typicalUnit}
-                            </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', gap: '6px', marginTop: '1px' }}>
+                            <span style={{ fontWeight: '600' }}>{crop.category}</span>
+                            <span>•</span>
+                            <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>{crop.scientificName}</span>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
 
-                {/* 4. Footer summary */}
-                <div style={{ padding: '6px 12px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: '0.7rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{cropTotalCount} variedades en base de datos</span>
-                  <span style={{ fontWeight: '700', color: '#15803d' }}>Paginación dinámica</span>
-                </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#15803d' }}>
+                            S/ {crop.referencePriceKg.toFixed(2)} / kg
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                            Unidad típica: {crop.typicalUnit}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
 
+          {/* Active Selection Badge */}
+          {formData.cropType && (
+            <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={13} color="#15803d" />
+              <span>Variedad seleccionada: <strong>{formData.cropType}</strong> (Precio de referencia sugerido: <strong>S/ {formData.estimatedPricePerKg}/kg</strong>)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Weight & Price in Clean 2-column Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
           <div>
             <label htmlFor="lot-weight" style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-              Peso (kg)
+              Peso Estimado (kg)
             </label>
             <input
               id="lot-weight"
@@ -717,7 +704,7 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
 
           <div>
             <label htmlFor="lot-price" style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-              Precio Base (S/ kg)
+              Precio Base Esperado (S/ kg)
             </label>
             <input
               id="lot-price"
@@ -733,15 +720,21 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
 
         {/* UNIFIED INTERACTIVE LOCATION PICKER (Donald Norman / Jakob Nielsen H7) */}
         <div style={{ backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '20px' }}>
-          {/* Header & Active Source Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          {/* Header with Autocompleted District and Source Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MapPin size={16} color="#15803d" />
               <span>Lugar y Tranquera de Recojo</span>
             </span>
-            <span style={{ fontSize: '0.72rem', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: '800', padding: '2px 8px', borderRadius: '4px' }}>
-              {locationSourceLabel}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle2 size={12} />
+                <span>Distrito: <strong>{formData.townName}</strong> (Autocompletado)</span>
+              </span>
+              <span style={{ fontSize: '0.72rem', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: '800', padding: '3px 8px', borderRadius: '4px' }}>
+                {locationSourceLabel}
+              </span>
+            </div>
           </div>
 
           {/* Interactive Mini-Map with Floating GPS Controls */}
@@ -751,6 +744,7 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
               zoom={14}
               style={{ height: '100%', width: '100%' }}
               zoomControl={false}
+              attributionControl={false}
             >
               <TileLayer
                 attribution='&copy; OpenStreetMap'
@@ -820,7 +814,7 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
               bottom: '6px',
               left: '6px',
               right: '6px',
-              backgroundColor: 'rgba(255,255,255,0.94)',
+              backgroundColor: 'rgba(255,255,255,0.95)',
               backdropFilter: 'blur(4px)',
               padding: '5px 10px',
               borderRadius: '6px',
@@ -834,7 +828,7 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <MapPin size={13} color="#15803d" />
-                <span><strong>GPS Parcela:</strong> {formData.townName} ({formData.latitude}, {formData.longitude})</span>
+                <span><strong>Tranquera GPS:</strong> {formData.townName} ({formData.latitude}, {formData.longitude})</span>
               </div>
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>
                 Toca el mapa para ajustar la tranquera
@@ -842,171 +836,143 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
             </div>
           </div>
 
-          {/* Quick Parcel Chips & Autocompleted District in One Seamless Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '14px', alignItems: 'start', marginBottom: '10px' }}>
-            {/* Quick Favorite Parcel Chips with Add Option */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b' }}>
-                  Parcelas Habituales del Productor:
-                </span>
-                {!isAddingParcel && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewParcelName(`Parcela en ${formData.townName}`);
-                      setIsAddingParcel(true);
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      color: '#15803d',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0
-                    }}
-                    title="Guardar las coordenadas actuales como una nueva parcela habitual"
-                  >
-                    <Plus size={13} />
-                    <span>Guardar esta ubicación</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Inline input to name and save the current location */}
-              {isAddingParcel && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <input
-                    type="text"
-                    placeholder="Nombre (ej. Fundo Don Toribio)"
-                    value={newParcelName}
-                    onChange={(e) => setNewParcelName(e.target.value)}
-                    style={{
-                      padding: '5px 8px',
-                      fontSize: '0.78rem',
-                      borderRadius: '6px',
-                      border: '1.5px solid #15803d',
-                      outline: 'none',
-                      flex: 1,
-                      boxSizing: 'border-box'
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveNewParcel}
-                    style={{
-                      padding: '5px 10px',
-                      fontSize: '0.74rem',
-                      fontWeight: '700',
-                      backgroundColor: '#15803d',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsAddingParcel(false); setNewParcelName(''); }}
-                    style={{
-                      padding: '5px 8px',
-                      fontSize: '0.74rem',
-                      color: '#64748b',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
+          {/* Quick Parcel Chips - Spans 100% full width, no awkward columns */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: '700', color: '#475569', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Bookmark size={13} color="#15803d" />
+                <span>Parcelas Habituales del Productor:</span>
+              </span>
+              {!isAddingParcel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewParcelName(`Parcela en ${formData.townName}`);
+                    setIsAddingParcel(true);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.74rem',
+                    fontWeight: '700',
+                    color: '#15803d',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#dcfce7'
+                  }}
+                  title="Guardar las coordenadas actuales como una nueva parcela habitual"
+                >
+                  <Plus size={13} />
+                  <span>Guardar esta ubicación</span>
+                </button>
               )}
-
-              {/* Saved Parcel Chips */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {parcels.map(p => {
-                  const isSelected = selectedParcelId === p.id;
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => handleSelectParcel(p)}
-                      style={{
-                        padding: '4px 9px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.76rem',
-                        fontWeight: '700',
-                        border: isSelected ? '1.5px solid #15803d' : '1px solid #cbd5e1',
-                        backgroundColor: isSelected ? '#dcfce7' : '#ffffff',
-                        color: isSelected ? '#15803d' : '#334155',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <Bookmark size={11} color={isSelected ? '#15803d' : '#64748b'} />
-                      <span>{p.name}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 'normal' }}>({p.townName})</span>
-                      {parcels.length > 1 && (
-                        <span
-                          onClick={(e) => handleDeleteParcel(e, p.id)}
-                          title="Eliminar parcela habitual"
-                          style={{
-                            color: '#94a3b8',
-                            marginLeft: '2px',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            fontWeight: 'normal',
-                            lineHeight: 1
-                          }}
-                          onMouseEnter={(e) => e.target.style.color = '#dc2626'}
-                          onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
-                        >
-                          ×
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
 
-            {/* Base District (100% Autocompleted, NOT a manual dropdown!) */}
-            <div>
-              <span style={{ display: 'block', fontSize: '0.74rem', fontWeight: '700', color: '#64748b', marginBottom: '6px' }}>
-                Distrito (Autocompletado por GPS):
-              </span>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d', flexShrink: 0 }}>
-                  <CheckCircle2 size={14} />
-                </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {formData.townName}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                    Valle del Mantaro · Asignado
-                  </div>
-                </div>
+            {/* Inline input to name and save the current location */}
+            {isAddingParcel && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Nombre de la parcela (ej. Fundo Don Toribio)"
+                  value={newParcelName}
+                  onChange={(e) => setNewParcelName(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.8rem',
+                    borderRadius: '6px',
+                    border: '1.5px solid #15803d',
+                    outline: 'none',
+                    flex: 1,
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveNewParcel}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: '700',
+                    backgroundColor: '#15803d',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsAddingParcel(false); setNewParcelName(''); }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.76rem',
+                    color: '#64748b',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
               </div>
+            )}
+
+            {/* Saved Parcel Chips - Displayed horizontally */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {parcels.map(p => {
+                const isSelected = selectedParcelId === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => handleSelectParcel(p)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      border: isSelected ? '1.5px solid #15803d' : '1px solid #cbd5e1',
+                      backgroundColor: isSelected ? '#dcfce7' : '#ffffff',
+                      color: isSelected ? '#15803d' : '#334155',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: isSelected ? '0 1px 2px rgba(21, 128, 61, 0.15)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Bookmark size={12} color={isSelected ? '#15803d' : '#64748b'} />
+                    <span>{p.name}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'normal' }}>({p.townName})</span>
+                    {parcels.length > 1 && (
+                      <span
+                        onClick={(e) => handleDeleteParcel(e, p.id)}
+                        title="Eliminar parcela habitual"
+                        style={{
+                          color: '#94a3b8',
+                          marginLeft: '3px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 'bold',
+                          lineHeight: 1
+                        }}
+                        onMouseEnter={(e) => e.target.style.color = '#dc2626'}
+                        onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                      >
+                        ×
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
