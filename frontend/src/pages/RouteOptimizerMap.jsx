@@ -213,12 +213,48 @@ export default function RouteOptimizerMap() {
     }
   };
 
-  const polylineCoords = activeRoute
-    ? [
-        ...activeRoute.stops.map(s => [s.latitude, s.longitude]),
-        [DESTINATION.lat, DESTINATION.lng]
-      ]
-    : [];
+  const [roadGeometry, setRoadGeometry] = useState([]);
+
+  // Fetch real street road geometry via OSRM to curve along actual roads
+  useEffect(() => {
+    if (!activeRoute || !activeRoute.stops || activeRoute.stops.length === 0) {
+      setRoadGeometry([]);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchRoadGeometry = async () => {
+      try {
+        const waypoints = [
+          ...activeRoute.stops.map(s => `${s.longitude},${s.latitude}`),
+          `${DESTINATION.lng},${DESTINATION.lat}`
+        ].join(';');
+
+        const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('OSRM service unavailable');
+        const data = await res.json();
+
+        if (isMounted && data.routes && data.routes[0] && data.routes[0].geometry) {
+          const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+          setRoadGeometry(coords);
+          return;
+        }
+      } catch (e) {
+        // Fallback to straight segments if network or OSRM is slow
+      }
+
+      if (isMounted) {
+        setRoadGeometry([
+          ...activeRoute.stops.map(s => [s.latitude, s.longitude]),
+          [DESTINATION.lat, DESTINATION.lng]
+        ]);
+      }
+    };
+
+    fetchRoadGeometry();
+    return () => { isMounted = false; };
+  }, [activeRoute]);
 
   return (
     <div>
@@ -582,14 +618,13 @@ export default function RouteOptimizerMap() {
                 </Marker>
               ))}
 
-              {/* Polyline Route */}
-              {polylineCoords.length > 1 && (
+              {/* Polyline Route: Snapped to actual streets and roads */}
+              {roadGeometry.length > 1 && (
                 <Polyline
-                  positions={polylineCoords}
+                  positions={roadGeometry}
                   color="#15803d"
                   weight={5}
                   opacity={0.85}
-                  dashArray="8, 6"
                 />
               )}
             </MapContainer>
