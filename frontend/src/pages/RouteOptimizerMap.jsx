@@ -230,9 +230,15 @@ export default function RouteOptimizerMap() {
           `${DESTINATION.lng},${DESTINATION.lat}`
         ].join(';');
 
-        const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('OSRM service unavailable');
+        const osrmBase = import.meta.env.VITE_OSRM_URL || 'https://osrm.astrazynk.pp.ua';
+        let res;
+        try {
+          res = await fetch(`${osrmBase}/route/v1/driving/${waypoints}?overview=full&geometries=geojson`);
+        } catch {
+          // Secondary fallback to public OSRM if self-hosted is unreachable
+          res = await fetch(`https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`);
+        }
+        if (!res || !res.ok) throw new Error('OSRM service unavailable');
         const data = await res.json();
 
         if (isMounted && data.routes && data.routes[0] && data.routes[0].geometry) {
