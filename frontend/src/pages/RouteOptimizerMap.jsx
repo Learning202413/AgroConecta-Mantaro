@@ -23,6 +23,7 @@ import {
   Info,
   FileText,
   Printer,
+  Phone,
   X
 } from 'lucide-react';
 
@@ -653,7 +654,12 @@ export default function RouteOptimizerMap() {
                   Paradas de Recolección Programadas:
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {activeRoute.stops.map(stop => (
+                  {activeRoute.stops.map(stop => {
+                    const matchingLot = activeRoute.lots?.find(
+                      l => l.townName.toLowerCase() === stop.townName.toLowerCase() ||
+                           (Math.abs(l.latitude - stop.latitude) < 0.005 && Math.abs(l.longitude - stop.longitude) < 0.005)
+                    );
+                    return (
                     <div
                       key={stop.id}
                       style={{
@@ -682,11 +688,37 @@ export default function RouteOptimizerMap() {
                           {stop.stopOrder}
                         </div>
                         <div>
-                          <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a' }}>
-                            {stop.townName}
+                          <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{stop.townName}</span>
+                            {matchingLot && (
+                              <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: '600' }}>
+                                · {matchingLot.producerName} ({matchingLot.cropType})
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            Carga a recoger: {stop.weightToCollectKg.toLocaleString()} kg
+                          <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                            <span>Carga a recoger: <strong>{stop.weightToCollectKg.toLocaleString()} kg</strong></span>
+                            {matchingLot?.contactPhone && (
+                              <a
+                                href={`tel:${matchingLot.contactPhone}`}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  color: '#1d4ed8',
+                                  textDecoration: 'none',
+                                  fontWeight: '600',
+                                  backgroundColor: '#eff6ff',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.72rem'
+                                }}
+                                title="Llamar al productor ante cualquier contingencia"
+                              >
+                                <Phone size={10} />
+                                <span>{matchingLot.contactPhone}</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -724,7 +756,8 @@ export default function RouteOptimizerMap() {
                         </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Final Destination Discharge Stop (Gran Mercado Mayorista de Huancayo) */}
                   <div

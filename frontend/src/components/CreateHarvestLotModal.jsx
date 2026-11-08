@@ -700,6 +700,11 @@ export default function CreateHarvestLotModal({ isOpen, onClose, onCreated }) {
               placeholder="Ej. 1500"
               style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
             />
+            {formData.weightKg && parseFloat(formData.weightKg) > 0 && (
+              <div style={{ fontSize: '0.74rem', color: '#15803d', marginTop: '4px', fontWeight: '600' }}>
+                ≈ {Math.round(parseFloat(formData.weightKg) / 50)} sacos estándar (~50 kg c/u)
+              </div>
+            )}
           </div>
 
           <div>
