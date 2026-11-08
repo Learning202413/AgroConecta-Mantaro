@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from './ui/ConfirmModal';
+import AdminManagementModal from './AdminManagementModal';
 import {
   Sprout,
   Truck,
@@ -17,6 +18,7 @@ import {
 export default function Sidebar({ onOpenCreateModal }) {
   const { user, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   const navStyle = ({ isActive }) => ({
     display: 'flex',
@@ -151,6 +153,55 @@ export default function Sidebar({ onOpenCreateModal }) {
           <Truck size={16} />
           <span>Planificar Flete</span>
         </NavLink>
+      ) : user?.role === 'Admin' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+          <button
+            type="button"
+            onClick={() => setIsAdminModalOpen(true)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px',
+              borderRadius: '8px',
+              backgroundColor: '#6b21a8',
+              color: '#ffffff',
+              border: 'none',
+              fontWeight: '700',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(107, 33, 168, 0.2)'
+            }}
+          >
+            <Building2 size={16} />
+            <span>Gestión de Maestros</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenCreateModal}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '7px',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              color: '#15803d',
+              border: '1px solid #bbf7d0',
+              fontWeight: '700',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            <PlusCircle size={14} />
+            <span>+ Registrar Cosecha</span>
+          </button>
+        </div>
       ) : (
         <button
           type="button"
@@ -240,6 +291,12 @@ export default function Sidebar({ onOpenCreateModal }) {
                 logout();
               }}
               onCancel={() => setIsLogoutModalOpen(false)}
+            />
+
+            {/* Master Admin Fleet & Catalog Management Modal (Nielsen H7 / Norman Signifiers) */}
+            <AdminManagementModal
+              isOpen={isAdminModalOpen}
+              onClose={() => setIsAdminModalOpen(false)}
             />
           </>
         )}

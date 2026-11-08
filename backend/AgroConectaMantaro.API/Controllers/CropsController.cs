@@ -19,6 +19,14 @@ public record CropSearchResponseDto(
     List<CropItemDto> Items
 );
 
+public record CreateCropRequestDto(
+    string Name,
+    string Category,
+    string ScientificName,
+    string TypicalUnit,
+    decimal ReferencePriceKg
+);
+
 [ApiController]
 [Route("api/[controller]")]
 public class CropsController : ControllerBase
@@ -151,5 +159,25 @@ public class CropsController : ControllerBase
             totalPages,
             items
         ));
+    }
+
+    [HttpPost]
+    public IActionResult CreateCrop([FromBody] CreateCropRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("El nombre del cultivo es obligatorio.");
+
+        var newId = RegionalCatalog.Count > 0 ? RegionalCatalog.Max(c => c.Id) + 1 : 1;
+        var newCrop = new CropItemDto(
+            newId,
+            request.Name.Trim(),
+            string.IsNullOrWhiteSpace(request.Category) ? "Otros" : request.Category.Trim(),
+            string.IsNullOrWhiteSpace(request.ScientificName) ? "Variedad Andina" : request.ScientificName.Trim(),
+            string.IsNullOrWhiteSpace(request.TypicalUnit) ? "Saco 50kg" : request.TypicalUnit.Trim(),
+            request.ReferencePriceKg > 0 ? request.ReferencePriceKg : 1.50m
+        );
+
+        RegionalCatalog.Add(newCrop);
+        return Ok(newCrop);
     }
 }

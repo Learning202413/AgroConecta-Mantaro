@@ -156,6 +156,16 @@ public class RouteOptimizationService : IRouteOptimizationService
                 route.TransportVehicle.IsAvailable = true;
                 await _vehicleRepo.UpdateAsync(route.TransportVehicle);
             }
+
+            // Close delivery lifecycle for all lots assigned to this route
+            if (route.Lots != null)
+            {
+                foreach (var lot in route.Lots)
+                {
+                    lot.Status = "Delivered";
+                    await _lotRepo.UpdateAsync(lot);
+                }
+            }
         }
         else
         {

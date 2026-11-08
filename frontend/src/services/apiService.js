@@ -55,6 +55,15 @@ export const apiService = {
     return handleResponse(res);
   },
 
+  async createVehicle(data) {
+    const res = await fetch(`${API_BASE}/transportvehicles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
   // Routes & Optimization
   async getAllRoutes() {
     const res = await fetch(`${API_BASE}/routes`);
@@ -96,6 +105,15 @@ export const apiService = {
     params.append('pageSize', pageSize);
 
     const res = await fetch(`${API_BASE}/crops?${params.toString()}`);
+    return handleResponse(res);
+  },
+
+  async createCrop(data) {
+    const res = await fetch(`${API_BASE}/crops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
     return handleResponse(res);
   },
 

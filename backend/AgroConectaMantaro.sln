@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroConectaMantaro.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroConectaMantaro.API", "AgroConectaMantaro.API\AgroConectaMantaro.API.csproj", "{01E953FD-409A-4021-ACAA-7E3C46AB76D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroConectaMantaro.Tests", "AgroConectaMantaro.Tests\AgroConectaMantaro.Tests.csproj", "{966AB972-7C3F-4D33-973B-49A9F40BE17A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{01E953FD-409A-4021-ACAA-7E3C46AB76D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01E953FD-409A-4021-ACAA-7E3C46AB76D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01E953FD-409A-4021-ACAA-7E3C46AB76D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{966AB972-7C3F-4D33-973B-49A9F40BE17A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{966AB972-7C3F-4D33-973B-49A9F40BE17A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{966AB972-7C3F-4D33-973B-49A9F40BE17A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{966AB972-7C3F-4D33-973B-49A9F40BE17A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
