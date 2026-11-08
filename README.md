@@ -134,3 +134,11 @@ Quick 1-click profiles are available directly on the login screen:
 - **Producer:** `productor@agroconecta.pe` / `1234`
 - **Carrier:** `transportista@agroconecta.pe` / `1234`
 - **Admin:** `admin@agroconecta.pe` / `1234`
+
+---
+
+## 8. Architectural & UX Documentation
+
+For in-depth specifications prepared for the evaluation committee, consult:
+- [Systems Architecture & Domain Flows](file:///docs/ARCHITECTURE_FLOWS.md): Comprehensive review of the decoupled logistics marketplace model, entity state machines, and TSP nearest-neighbor routing engine.
+- [UX & Edge Cases Specification](file:///docs/UX_EDGE_CASES.md): Exhaustive analysis of operating contexts, ISO 9241 ergonomics, and failure mode mitigation for all user roles.
