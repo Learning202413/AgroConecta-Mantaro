@@ -25,8 +25,11 @@ export const apiService = {
   },
 
   // Harvest Lots
-  async getAllLots() {
-    const res = await fetch(`${API_BASE}/harvestlots`);
+  async getAllLots(producer = '') {
+    const url = producer
+      ? `${API_BASE}/harvestlots?producer=${encodeURIComponent(producer)}`
+      : `${API_BASE}/harvestlots`;
+    const res = await fetch(url);
     return handleResponse(res);
   },
 

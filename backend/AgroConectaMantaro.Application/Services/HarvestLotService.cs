@@ -13,9 +13,14 @@ public class HarvestLotService : IHarvestLotService
         _repository = repository;
     }
 
-    public async Task<IEnumerable<HarvestLotDto>> GetAllAsync()
+    public async Task<IEnumerable<HarvestLotDto>> GetAllAsync(string? producer = null)
     {
         var lots = await _repository.GetAllAsync();
+        if (!string.IsNullOrWhiteSpace(producer))
+        {
+            var p = producer.Trim();
+            lots = lots.Where(l => l.ProducerName.Contains(p, StringComparison.OrdinalIgnoreCase));
+        }
         return lots.Select(MapToDto);
     }
 

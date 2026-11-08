@@ -16,9 +16,9 @@ public class HarvestLotsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? producer = null)
     {
-        var lots = await _service.GetAllAsync();
+        var lots = await _service.GetAllAsync(producer);
         return Ok(lots);
     }
 

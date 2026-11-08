@@ -76,4 +76,27 @@ public class HarvestLotServiceTests
         Assert.False(result);
         _lotRepoMock.Verify(r => r.DeleteAsync(It.IsAny<int>()), Times.Never);
     }
+
+    [Fact]
+    public async Task GetAllAsync_FiltersByProducerName_WhenProducerSpecified()
+    {
+        // Arrange (Multi-tenancy / Data isolation for producers)
+        var lots = new List<HarvestLot>
+        {
+            new() { Id = 1, ProducerName = "Eusebio Poma", CropType = "Papa Canchán", WeightKg = 1000 },
+            new() { Id = 2, ProducerName = "Maria Condor", CropType = "Zanahoria", WeightKg = 800 },
+            new() { Id = 3, ProducerName = "Eusebio Poma", CropType = "Papa Huayro", WeightKg = 1200 }
+        };
+
+        _lotRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(lots);
+
+        // Act
+        var result = await _service.GetAllAsync("Eusebio Poma");
+
+        // Assert
+        Assert.NotNull(result);
+        var filteredList = result.ToList();
+        Assert.Equal(2, filteredList.Count);
+        Assert.All(filteredList, l => Assert.Contains("Eusebio Poma", l.ProducerName, StringComparison.OrdinalIgnoreCase));
+    }
 }

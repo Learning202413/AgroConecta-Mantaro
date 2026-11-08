@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -138,6 +138,14 @@ export default function RouteOptimizerMap() {
       setLoading(false);
     }
   };
+
+  // Restrict displayed map lots if user is a Producer (Data privacy)
+  const displayedLots = useMemo(() => {
+    if (user?.role === 'Producer' && user.fullName) {
+      return availableLots.filter(l => l.producerName.toLowerCase().includes(user.fullName.toLowerCase()));
+    }
+    return availableLots;
+  }, [availableLots, user]);
 
   const handleLotToggle = (id) => {
     setValidationAlert(null);
@@ -541,8 +549,8 @@ export default function RouteOptimizerMap() {
                 </Popup>
               </Marker>
 
-              {/* Harvest lots markers with Farm Pin */}
-              {availableLots.map(lot => (
+              {/* Harvest lots markers with Farm Pin (Isolated for Producers) */}
+              {displayedLots.map(lot => (
                 <Marker key={lot.id} position={[lot.latitude, lot.longitude]} icon={farmLotIcon}>
                   <Popup>
                     <div style={{ fontWeight: '800', color: '#15803d' }}>{lot.cropType}</div>

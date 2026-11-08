@@ -36,7 +36,6 @@ export default function LotsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCrop, setSelectedCrop] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [onlyMyLots, setOnlyMyLots] = useState(false);
 
   // Deletion state (Norman / Shneiderman Safety Constraint)
   const [lotToDelete, setLotToDelete] = useState(null);
@@ -52,13 +51,14 @@ export default function LotsList() {
     const handleReload = () => loadLots();
     window.addEventListener('harvest-lot-created', handleReload);
     return () => window.removeEventListener('harvest-lot-created', handleReload);
-  }, []);
+  }, [user]);
 
   const loadLots = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getAllLots();
+      const producerParam = user?.role === 'Producer' ? user.fullName : '';
+      const data = await apiService.getAllLots(producerParam);
       setLots(data);
     } catch (err) {
       setError(err.message);
@@ -91,23 +91,28 @@ export default function LotsList() {
   // Filtered lots
   const filteredLots = useMemo(() => {
     return lots.filter((lot) => {
+      // PRODUCER STRICT PRIVACY: Producers can ONLY see their own harvest lots
+      if (user?.role === 'Producer' && user.fullName) {
+        if (!lot.producerName.toLowerCase().includes(user.fullName.toLowerCase())) {
+          return false;
+        }
+      }
+
       const matchSearch =
         lot.producerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lot.townName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lot.cropType.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCrop = selectedCrop === 'ALL' || lot.cropType === selectedCrop;
       const matchStatus = selectedStatus === 'ALL' || lot.status === selectedStatus;
-      const matchMyLots =
-        !onlyMyLots ||
-        (user?.fullName && lot.producerName.toLowerCase().includes(user.fullName.toLowerCase()));
-      return matchSearch && matchCrop && matchStatus && matchMyLots;
+
+      return matchSearch && matchCrop && matchStatus;
     });
-  }, [lots, searchTerm, selectedCrop, selectedStatus, onlyMyLots, user]);
+  }, [lots, searchTerm, selectedCrop, selectedStatus, user]);
 
   // Reset to page 1 if filter reduces count below current page
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrop, selectedStatus, onlyMyLots, pageSize]);
+  }, [searchTerm, selectedCrop, selectedStatus, pageSize]);
 
   // Sliced lots for current page
   const paginatedLots = useMemo(() => {
@@ -128,10 +133,12 @@ export default function LotsList() {
         <div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sprout size={24} color="#15803d" />
-            <span>Inventario de Cosechas en el Valle</span>
+            <span>{user?.role === 'Producer' ? 'Mis Cosechas Registradas' : 'Inventario de Cosechas en el Valle'}</span>
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
-            Lotes registrados para consolidación y transporte hacia el Gran Mercado Mayorista de Huancayo.
+            {user?.role === 'Producer'
+              ? `Lotes de ${user.fullName || 'tu propiedad'} registrados para consolidación y transporte hacia el Mercado Mayorista.`
+              : 'Lotes registrados para consolidación y transporte hacia el Gran Mercado Mayorista de Huancayo.'}
           </p>
         </div>
 
@@ -302,33 +309,25 @@ export default function LotsList() {
           />
         </div>
 
-        {/* Producer "Only My Lots" Toggle (Jakob Nielsen H7: Efficiency) */}
+        {/* Producer Privacy Indicator (ISO 9241-110 Conformity with User Expectations) */}
         {user?.role === 'Producer' && (
-          <label
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               fontSize: '0.82rem',
               fontWeight: '700',
-              color: onlyMyLots ? '#15803d' : '#64748b',
-              cursor: 'pointer',
-              userSelect: 'none',
-              backgroundColor: onlyMyLots ? '#f0fdf4' : '#f8fafc',
-              padding: '6px 12px',
+              color: '#15803d',
+              backgroundColor: '#f0fdf4',
+              padding: '8px 14px',
               borderRadius: '6px',
-              border: onlyMyLots ? '1px solid #86efac' : '1px solid #e2e8f0'
+              border: '1px solid #86efac'
             }}
           >
-            <input
-              type="checkbox"
-              checked={onlyMyLots}
-              onChange={(e) => setOnlyMyLots(e.target.checked)}
-              style={{ accentColor: '#15803d', cursor: 'pointer' }}
-            />
             <UserCheck size={14} />
-            <span>Solo mis cosechas</span>
-          </label>
+            <span>Vista de Productor: {user.fullName || 'Mis cosechas'}</span>
+          </div>
         )}
       </div>
 
