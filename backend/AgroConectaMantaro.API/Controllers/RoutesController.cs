@@ -30,6 +30,20 @@ public class RoutesController : ControllerBase
         return Ok(route);
     }
 
+    [HttpPost("estimate")]
+    public async Task<IActionResult> Estimate([FromBody] RouteEstimateRequestDto request)
+    {
+        try
+        {
+            var result = await _service.EstimateOptimalRouteAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("optimize")]
     public async Task<IActionResult> Optimize([FromBody] RouteOptimizationRequestDto request)
     {

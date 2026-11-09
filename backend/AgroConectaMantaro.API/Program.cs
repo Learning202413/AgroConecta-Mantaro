@@ -19,6 +19,7 @@ builder.Services.AddScoped<IMarketPriceRepository, MarketPriceRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Register Application Services
+builder.Services.AddSingleton<ITravelTimePredictor, WhiteBoxTravelTimePredictor>();
 builder.Services.AddScoped<IHarvestLotService, HarvestLotService>();
 builder.Services.AddScoped<ITransportVehicleService, TransportVehicleService>();
 builder.Services.AddScoped<IRouteOptimizationService, RouteOptimizationService>();

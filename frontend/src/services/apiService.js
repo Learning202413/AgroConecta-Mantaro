@@ -89,6 +89,15 @@ export const apiService = {
     return handleResponse(res);
   },
 
+  async estimateRoute(data) {
+    const res = await fetch(`${API_BASE}/routes/estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
   async optimizeRoute(data) {
     const res = await fetch(`${API_BASE}/routes/optimize`, {
       method: 'POST',

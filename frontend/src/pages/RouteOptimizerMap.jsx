@@ -24,7 +24,12 @@ import {
   FileText,
   Printer,
   Phone,
-  X
+  X,
+  Cpu,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 
 // Fix Leaflet default icon paths in Vite
@@ -83,6 +88,16 @@ const stopCollectedIcon = L.divIcon({
   popupAnchor: [0, -30]
 });
 
+const createSequenceIcon = (number, isCollected = false) => L.divIcon({
+  className: 'custom-pin-sequence',
+  html: `<div style="background: ${isCollected ? 'linear-gradient(135deg, #15803d, #10b981)' : 'linear-gradient(135deg, #15803d, #166534)'}; color: #ffffff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 2px solid #ffffff; font-weight: 800; font-size: 13px; font-family: sans-serif;">
+    ${number}
+  </div>`,
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30]
+});
+
 export default function RouteOptimizerMap() {
   const { user } = useAuth();
   const location = useLocation();
@@ -94,6 +109,12 @@ export default function RouteOptimizerMap() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validationAlert, setValidationAlert] = useState(null);
+
+  // Dynamic Route Estimation & Machine Learning State
+  const [routeEstimate, setRouteEstimate] = useState(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [isRushHour, setIsRushHour] = useState(false);
+  const [showAuditDetails, setShowAuditDetails] = useState(false);
 
   // Confirm Modal state (Norman / Shneiderman Rule 4 & 5)
   const [pendingStop, setPendingStop] = useState(null);
@@ -215,9 +236,51 @@ export default function RouteOptimizerMap() {
 
   const [roadGeometry, setRoadGeometry] = useState([]);
 
+  // Stops used for active map routing: either committed active route stops OR dynamically estimated sequence
+  const currentStops = useMemo(() => {
+    if (activeRoute?.stops?.length > 0) return activeRoute.stops;
+    if (routeEstimate?.orderedStops?.length > 0) return routeEstimate.orderedStops;
+    return [];
+  }, [activeRoute, routeEstimate]);
+
+  // Dynamic Route Estimation via Multiple Linear Regression & Multi-Stop Ordering
+  useEffect(() => {
+    if (activeRoute) return;
+
+    if (selectedLotIds.length === 0) {
+      setRouteEstimate(null);
+      return;
+    }
+
+    let isMounted = true;
+    const runEstimate = async () => {
+      try {
+        setIsEstimating(true);
+        const res = await apiService.estimateRoute({
+          selectedLotIds,
+          transportVehicleId: selectedVehicleId ? parseInt(selectedVehicleId) : null,
+          isRushHour
+        });
+        if (isMounted) {
+          setRouteEstimate(res);
+        }
+      } catch (err) {
+        console.warn('Notice estimating route:', err.message);
+      } finally {
+        if (isMounted) setIsEstimating(false);
+      }
+    };
+
+    const timer = setTimeout(runEstimate, 250);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [selectedLotIds, selectedVehicleId, isRushHour, activeRoute]);
+
   // Fetch real street road geometry via OSRM to curve along actual roads
   useEffect(() => {
-    if (!activeRoute || !activeRoute.stops || activeRoute.stops.length === 0) {
+    if (!currentStops || currentStops.length === 0) {
       setRoadGeometry([]);
       return;
     }
@@ -226,7 +289,7 @@ export default function RouteOptimizerMap() {
     const fetchRoadGeometry = async () => {
       try {
         const waypoints = [
-          ...activeRoute.stops.map(s => `${s.longitude},${s.latitude}`),
+          ...currentStops.map(s => `${s.longitude},${s.latitude}`),
           `${DESTINATION.lng},${DESTINATION.lat}`
         ].join(';');
 
@@ -252,7 +315,7 @@ export default function RouteOptimizerMap() {
 
       if (isMounted) {
         setRoadGeometry([
-          ...activeRoute.stops.map(s => [s.latitude, s.longitude]),
+          ...currentStops.map(s => [s.latitude, s.longitude]),
           [DESTINATION.lat, DESTINATION.lng]
         ]);
       }
@@ -260,7 +323,7 @@ export default function RouteOptimizerMap() {
 
     fetchRoadGeometry();
     return () => { isMounted = false; };
-  }, [activeRoute]);
+  }, [currentStops]);
 
   return (
     <div>
@@ -592,31 +655,45 @@ export default function RouteOptimizerMap() {
                 </Popup>
               </Marker>
 
-              {/* Harvest lots markers with Farm Pin (Isolated for Producers) */}
-              {displayedLots.map(lot => (
-                <Marker key={lot.id} position={[lot.latitude, lot.longitude]} icon={farmLotIcon}>
-                  <Popup>
-                    <div style={{ fontWeight: '800', color: '#15803d' }}>{lot.cropType}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#334155' }}>Productor: <strong>{lot.producerName}</strong></div>
-                    <div style={{ fontSize: '0.8rem', color: '#334155' }}>Carga: <strong>{lot.weightKg} kg</strong></div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <MapPin size={12} color="#15803d" />
-                      <span>{lot.townName}</span>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              {/* Harvest lots markers with Farm Pin or Sequence Pin (Isolated for Producers) */}
+              {displayedLots.map(lot => {
+                const estimatedStop = !activeRoute && routeEstimate?.orderedStops?.find(s => s.id === lot.id);
+                const iconToUse = estimatedStop
+                  ? createSequenceIcon(estimatedStop.stopOrder, false)
+                  : farmLotIcon;
+
+                return (
+                  <Marker key={lot.id} position={[lot.latitude, lot.longitude]} icon={iconToUse}>
+                    <Popup>
+                      <div style={{ fontWeight: '800', color: '#15803d' }}>
+                        {estimatedStop ? `Parada #${estimatedStop.stopOrder} · ` : ''}{lot.cropType}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#334155' }}>Productor: <strong>{lot.producerName}</strong></div>
+                      <div style={{ fontSize: '0.8rem', color: '#334155' }}>Carga: <strong>{lot.weightKg.toLocaleString()} kg</strong></div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <MapPin size={12} color="#15803d" />
+                        <span>{lot.townName}</span>
+                      </div>
+                      {estimatedStop && (
+                        <div style={{ marginTop: '6px', fontSize: '0.74rem', color: '#15803d', fontWeight: '700', backgroundColor: '#f0fdf4', padding: '3px 6px', borderRadius: '4px' }}>
+                          ✓ Parada #{estimatedStop.stopOrder} en la ruta óptima trazada
+                        </div>
+                      )}
+                    </Popup>
+                  </Marker>
+                );
+              })}
 
               {/* Active Route Stops with Differentiated Status Pin (Norman Signifier) */}
               {activeRoute && activeRoute.stops.map(stop => (
                 <Marker
                   key={stop.id}
                   position={[stop.latitude, stop.longitude]}
-                  icon={stop.isCollected ? stopCollectedIcon : stopPendingIcon}
+                  icon={stop.isCollected ? stopCollectedIcon : createSequenceIcon(stop.stopOrder, false)}
                 >
                   <Popup>
                     <div style={{ fontWeight: '800' }}>Parada #{stop.stopOrder}: {stop.townName}</div>
-                    <div style={{ fontSize: '0.8rem' }}>Volumen: {stop.weightToCollectKg} kg</div>
+                    <div style={{ fontSize: '0.8rem' }}>Volumen: {stop.weightToCollectKg.toLocaleString()} kg</div>
                     <div style={{ fontSize: '0.78rem', color: stop.isCollected ? '#15803d' : '#1e40af', fontWeight: '700' }}>
                       {stop.isCollected ? '✓ Recolectado' : '⏳ Pendiente de Recojo'}
                     </div>
@@ -852,6 +929,207 @@ export default function RouteOptimizerMap() {
                 </div>
               </div>
             </div>
+          ) : routeEstimate ? (
+            /* Dynamic Route Estimation & Stop Sequencing Panel */
+            <div style={{
+              marginTop: '20px',
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1.5px solid #86efac',
+              padding: '22px',
+              boxShadow: '0 4px 12px rgba(21, 128, 61, 0.08)'
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Cpu size={20} color="#15803d" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>Ruta Óptima Trazada y Estimación de Tiempo</span>
+                      <span style={{ fontSize: '0.72rem', backgroundColor: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                        Regresión Lineal Múltiple
+                      </span>
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                      Secuencia calculada para minimizar la distancia total hacia el Mercado Mayorista.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rush Hour Toggle */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: '600', color: '#475569', cursor: 'pointer', backgroundColor: isRushHour ? '#fef3c7' : '#f8fafc', padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                  <input
+                    type="checkbox"
+                    checked={isRushHour}
+                    onChange={(e) => setIsRushHour(e.target.checked)}
+                    style={{ accentColor: '#d97706', cursor: 'pointer' }}
+                  />
+                  <span>Hora Punta Huancayo / El Tambo</span>
+                </label>
+              </div>
+
+              {/* Metric Highlights */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '700', textTransform: 'uppercase' }}>Tiempo Estimado Total</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#15803d' }}>
+                    {Math.floor(routeEstimate.estimatedDurationMinutes / 60) > 0 ? `${Math.floor(routeEstimate.estimatedDurationMinutes / 60)} h ` : ''}
+                    {routeEstimate.estimatedDurationMinutes % 60} min
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#166534' }}>{routeEstimate.estimatedDurationMinutes} minutos calculados</div>
+                </div>
+
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Distancia Carretera</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>
+                    {routeEstimate.totalDistanceKm} km
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Vía red vial OSRM Junín</div>
+                </div>
+
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Carga Consolidada</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>
+                    {routeEstimate.totalWeightKg.toLocaleString()} kg
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{(routeEstimate.totalWeightKg / 1000).toFixed(2)} toneladas</div>
+                </div>
+
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Paradas de Recojo</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>
+                    {routeEstimate.orderedStops.length} paradas
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>+ Destino Mayorista</div>
+                </div>
+              </div>
+
+              {/* Sequence Breadcrumb Visualization */}
+              <div style={{ marginBottom: '16px', backgroundColor: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>
+                  Secuencia Óptima de Recolección (Evita retrocesos a lo largo del Valle del Mantaro):
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  {routeEstimate.orderedStops.map((stop) => (
+                    <div key={stop.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#ffffff',
+                        border: '1.5px solid #15803d',
+                        padding: '5px 10px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        color: '#0f172a'
+                      }}>
+                        <span style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          backgroundColor: '#15803d',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.7rem'
+                        }}>
+                          {stop.stopOrder}
+                        </span>
+                        <span>{stop.townName}</span>
+                        <span style={{ color: '#15803d', fontSize: '0.72rem' }}>({stop.weightToCollectKg.toLocaleString()} kg)</span>
+                      </div>
+                      <ArrowRight size={14} color="#94a3b8" />
+                    </div>
+                  ))}
+
+                  {/* Final Wholesale Destination */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#faf5ff',
+                    border: '1.5px solid #9333ea',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.78rem',
+                    fontWeight: '800',
+                    color: '#581c87'
+                  }}>
+                    <Building2 size={14} color="#9333ea" />
+                    <span>Gran Mercado Mayorista de Huancayo</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* White-Box Audit Accordion */}
+              {routeEstimate.regressionAudit && (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAuditDetails(!showAuditDetails)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 14px',
+                      backgroundColor: '#f8fafc',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.82rem',
+                      fontWeight: '700',
+                      color: '#334155'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ShieldCheck size={16} color="#15803d" />
+                      <span>Auditoría Matemática de Caja Blanca (Cátedra UPLA / MTC D.S. 020-2021)</span>
+                      <span style={{ fontSize: '0.72rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
+                        R² = {routeEstimate.regressionAudit.rSquared.toFixed(3)}
+                      </span>
+                    </div>
+                    {showAuditDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+
+                  {showAuditDetails && (
+                    <div style={{ padding: '14px', backgroundColor: '#ffffff', fontSize: '0.8rem', color: '#334155' }}>
+                      <div style={{ marginBottom: '10px', padding: '8px 12px', backgroundColor: '#f1f5f9', borderRadius: '6px', fontFamily: 'monospace', fontSize: '0.82rem', color: '#0f172a' }}>
+                        {routeEstimate.regressionAudit.formula} + (12 min × {routeEstimate.orderedStops.length} paradas de estiba)
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{ padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b' }}>Manejo base en carretera:</span>
+                          <strong style={{ float: 'right', color: '#0f172a' }}>{routeEstimate.baseDrivingMinutes} min</strong>
+                        </div>
+                        <div style={{ padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b' }}>Inercia/freno por carga ({(routeEstimate.totalWeightKg / 1000).toFixed(1)} t):</span>
+                          <strong style={{ float: 'right', color: '#15803d' }}>+{routeEstimate.weightImpactMinutes} min</strong>
+                        </div>
+                        <div style={{ padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b' }}>Congestión urbana en hora punta:</span>
+                          <strong style={{ float: 'right', color: routeEstimate.rushHourImpactMinutes > 0 ? '#b45309' : '#64748b' }}>
+                            +{routeEstimate.rushHourImpactMinutes} min
+                          </strong>
+                        </div>
+                        <div style={{ padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b' }}>Estiba y carga en chacras ({routeEstimate.orderedStops.length} paradas):</span>
+                          <strong style={{ float: 'right', color: '#0f172a' }}>+{routeEstimate.stowageLoadingMinutes} min</strong>
+                        </div>
+                      </div>
+
+                      <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', lineHeight: '1.4' }}>
+                        {routeEstimate.regressionAudit.interpretation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div style={{ marginTop: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px dashed #cbd5e1', padding: '24px', textAlign: 'center' }}>
               <Info size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
@@ -859,7 +1137,7 @@ export default function RouteOptimizerMap() {
                 Sin hoja de ruta activa
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                Seleccione un camión y los lotes deseados a la izquierda, y presione <strong>"Optimizar y Consolidar Flete"</strong> para generar la secuencia de recolección en el mapa.
+                Seleccione uno o varios lotes de cosecha a la izquierda para estimar el tiempo de viaje con Regresión Lineal y trazar la ruta óptima de recolección hacia Huancayo.
               </p>
             </div>
           )}
