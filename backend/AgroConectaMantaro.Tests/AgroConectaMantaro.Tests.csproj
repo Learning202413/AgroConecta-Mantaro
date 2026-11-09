@@ -26,4 +26,11 @@
     <ProjectReference Include="..\AgroConectaMantaro.Domain\AgroConectaMantaro.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\data\dataset_transporte_mantaro.csv">
+      <Link>data\dataset_transporte_mantaro.csv</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

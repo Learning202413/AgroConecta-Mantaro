@@ -49,6 +49,7 @@ public class RegressionAuditDto
     public double DistanceBeta1 { get; set; }
     public double WeightBeta2 { get; set; }
     public double RushHourBeta3 { get; set; }
+    public int SampleSize { get; set; }
     public string Interpretation { get; set; } = string.Empty;
 }
 

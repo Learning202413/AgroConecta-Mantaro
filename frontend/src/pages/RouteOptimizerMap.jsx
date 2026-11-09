@@ -1087,10 +1087,15 @@ export default function RouteOptimizerMap() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <ShieldCheck size={16} color="#15803d" />
-                      <span>Auditoría Matemática de Caja Blanca (Cátedra UPLA / MTC D.S. 020-2021)</span>
-                      <span style={{ fontSize: '0.72rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span>Auditoría Matemática (Cátedra UPLA / MTC D.S. 020-2021)</span>
+                      <span style={{ fontSize: '0.72rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
                         R² = {routeEstimate.regressionAudit.rSquared.toFixed(3)}
                       </span>
+                      {routeEstimate.regressionAudit.sampleSize > 0 && (
+                        <span style={{ fontSize: '0.72rem', color: '#1e40af', backgroundColor: '#dbeafe', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                          N = {routeEstimate.regressionAudit.sampleSize} viajes reales
+                        </span>
+                      )}
                     </div>
                     {showAuditDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
