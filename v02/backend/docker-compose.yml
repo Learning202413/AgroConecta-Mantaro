@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mantaro-frost-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mantaro_frost_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: MantaroSecure2026!Db
+    volumes:
+      - mantaro_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mantaro_frost_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mantaro-frost-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=mantaro_frost_db;Username=postgres;Password=MantaroSecure2026!Db"
+      VpsApi__BaseUrl: "https://heladas-api.astrazynk.pp.ua"
+    ports:
+      - "5090:5000"
+
+volumes:
+  mantaro_pgdata:

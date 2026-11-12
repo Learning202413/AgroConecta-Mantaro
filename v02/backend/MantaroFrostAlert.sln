@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MantaroFrostAlert.Domain", "MantaroFrostAlert.Domain\MantaroFrostAlert.Domain.csproj", "{B925EAED-7A6E-48BA-96A3-0140AC60D5F5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MantaroFrostAlert.Application", "MantaroFrostAlert.Application\MantaroFrostAlert.Application.csproj", "{13A730A6-75ED-45E9-B1BF-07114CB31749}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MantaroFrostAlert.Infrastructure", "MantaroFrostAlert.Infrastructure\MantaroFrostAlert.Infrastructure.csproj", "{8BEB8409-6954-4013-868B-0913DB378249}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MantaroFrostAlert.API", "MantaroFrostAlert.API\MantaroFrostAlert.API.csproj", "{99043F8C-A01C-4A82-A8E2-C01044A9BD17}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B925EAED-7A6E-48BA-96A3-0140AC60D5F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B925EAED-7A6E-48BA-96A3-0140AC60D5F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B925EAED-7A6E-48BA-96A3-0140AC60D5F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B925EAED-7A6E-48BA-96A3-0140AC60D5F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13A730A6-75ED-45E9-B1BF-07114CB31749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13A730A6-75ED-45E9-B1BF-07114CB31749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13A730A6-75ED-45E9-B1BF-07114CB31749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13A730A6-75ED-45E9-B1BF-07114CB31749}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BEB8409-6954-4013-868B-0913DB378249}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BEB8409-6954-4013-868B-0913DB378249}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BEB8409-6954-4013-868B-0913DB378249}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BEB8409-6954-4013-868B-0913DB378249}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99043F8C-A01C-4A82-A8E2-C01044A9BD17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99043F8C-A01C-4A82-A8E2-C01044A9BD17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99043F8C-A01C-4A82-A8E2-C01044A9BD17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99043F8C-A01C-4A82-A8E2-C01044A9BD17}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
